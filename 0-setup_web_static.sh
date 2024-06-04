@@ -23,6 +23,15 @@ echo "<html>
 # Create (or recreate) the symbolic link
 sudo ln -sf /data/web_static/releases/test/ /data/web_static/current
 
+# Ensure ubuntu user and group exist
+if ! id -u ubuntu > /dev/null 2>&1; then
+    sudo adduser --disabled-password --gecos "" ubuntu
+fi
+
+if ! getent group ubuntu > /dev/null 2>&1; then
+    sudo addgroup ubuntu
+fi
+
 # Give ownership of /data/ folder to the ubuntu user and group
 sudo chown -R ubuntu:ubuntu /data/
 
@@ -30,6 +39,6 @@ sudo chown -R ubuntu:ubuntu /data/
 sudo sed -i '/server_name _;/a \ \n\tlocation /hbnb_static/ {\n\t\talias /data/web_static/current/;\n\t}\n' /etc/nginx/sites-available/default
 
 # Restart Nginx to apply changes
-sudo service nginx restart
+sudo service nginx restart || sudo service nginx start
 
 exit 0
