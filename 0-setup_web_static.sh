@@ -35,8 +35,13 @@ fi
 # Give ownership of /data/ folder to the ubuntu user and group
 sudo chown -R ubuntu:ubuntu /data/
 
-# Update the Nginx configuration to serve the content
-sudo sed -i '/server_name _;/a \ \n\tlocation /hbnb_static/ {\n\t\talias /data/web_static/current/;\n\t}\n' /etc/nginx/sites-available/default
+# Check if the location block already exists
+if ! grep -q "location /hbnb_static/" /etc/nginx/sites-available/default; then
+    sudo sed -i '/server_name _;/a \ \n\tlocation /hbnb_static/ {\n\t\talias /data/web_static/current/;\n\t}\n' /etc/nginx/sites-available/default
+fi
+
+# Check Nginx configuration syntax
+sudo nginx -t
 
 # Restart Nginx to apply changes
 sudo service nginx restart || sudo service nginx start
