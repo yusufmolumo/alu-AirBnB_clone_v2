@@ -37,13 +37,14 @@ sudo chown -R ubuntu:ubuntu /data/
 
 # Check if the location block already exists
 if ! grep -q "location /hbnb_static/" /etc/nginx/sites-available/default; then
+    # Add the location block if it doesn't exist
     sudo sed -i '/server_name _;/a \ \n\tlocation /hbnb_static/ {\n\t\talias /data/web_static/current/;\n\t}\n' /etc/nginx/sites-available/default
+    # Check Nginx configuration syntax
+    sudo nginx -t
+    # Restart Nginx to apply changes
+    sudo service nginx restart || sudo service nginx start
+else
+    echo "Location block already exists in Nginx configuration. Skipping..."
 fi
-
-# Check Nginx configuration syntax
-sudo nginx -t
-
-# Restart Nginx to apply changes
-sudo service nginx restart || sudo service nginx start
 
 exit 0
