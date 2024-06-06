@@ -1,51 +1,49 @@
 #!/usr/bin/python3
 """
-Fabric script based on the file 1-pack_web_static.py that distributes an
-archive to the web servers
+Fabric script that distributes an archive to your web servers
 """
-
-from fabric import Connection, task
+from fabric.api import env, put, run
 from os.path import exists
 
-# Define the list of servers
-servers = ['52.207.225.125', '54.160.166.220']
+env.hosts = ['52.207.225.125', '54.160.166.220']
 
-@task(hosts=servers)
-def do_deploy(c, archive_path):
-    """Distributes an archive to the web servers"""
+
+def do_deploy(archive_path):
+    """
+    Distributes an archive to the web servers
+    """
     if not exists(archive_path):
         return False
+
     try:
-        # Extract filename and folder name
-        file_name = archive_path.split("/")[-1]
-        folder_name = file_name.split(".")[0]
-        path = "/data/web_static/releases/"
+        # Upload archive to /tmp/ directory
+        put(archive_path, "/tmp/")
 
-        # Upload the archive to /tmp/
-        c.put(archive_path, '/tmp/')
+        # Extract archive to /data/web_static/releases/<archive filename without extension>
+        archive_filename = archive_path.split("/")[-1]
+        folder_name = "/data/web_static/releases/{}".format(
+            archive_filename.split(".")[0])
+        run("mkdir -p {}".format(folder_name))
+        run("tar -xzf /tmp/{} -C {}".format(archive_filename, folder_name))
 
-        # Create the directory if it doesn't exist
-        c.run('mkdir -p {}{}/'.format(path, folder_name))
+        # Remove archive from the web server
+        run("rm /tmp/{}".format(archive_filename))
 
-        # Uncompress the archive
-        c.run('tar -xzf /tmp/{} -C {}{}/'.format(file_name, path, folder_name))
+        # Move contents of web_static/ to new folder
+        run("mv {}/web_static/* {}".format(folder_name, folder_name))
 
-        # Remove the archive
-        c.run('rm /tmp/{}'.format(file_name))
+        # Remove empty web_static/ directory
+        run("rm -rf {}/web_static".format(folder_name))
 
-        # Move files from web_static to new folder
-        c.run('mv {0}{1}/web_static/* {0}{1}/'.format(path, folder_name))
+        # Remove current symbolic link
+        run("rm -rf /data/web_static/current")
 
-        # Remove web_static folder
-        c.run('rm -rf {}{}/web_static'.format(path, folder_name))
+        # Create new symbolic link
+        run("ln -s {} /data/web_static/current".format(folder_name))
 
-        # Remove the old symbolic link
-        c.run('rm -rf /data/web_static/current')
-
-        # Create a new symbolic link
-        c.run('ln -s {}{}/ /data/web_static/current'.format(path, folder_name))
-
+        print("New version deployed!")
         return True
+
     except Exception as e:
         print(e)
         return False
