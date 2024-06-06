@@ -4,13 +4,14 @@ Fabric script based on the file 1-pack_web_static.py that distributes an
 archive to the web servers
 """
 
-from fabric.api import put, run, env
+from fabric import Connection, task
 from os.path import exists
 
 # Define the list of servers
-env.hosts = ['52.207.225.125', '54.160.166.220']
+servers = ['52.207.225.125', '54.160.166.220']
 
-def do_deploy(archive_path):
+@task(hosts=servers)
+def do_deploy(c, archive_path):
     """Distributes an archive to the web servers"""
     if not exists(archive_path):
         return False
@@ -21,28 +22,28 @@ def do_deploy(archive_path):
         path = "/data/web_static/releases/"
 
         # Upload the archive to /tmp/
-        put(archive_path, '/tmp/')
+        c.put(archive_path, '/tmp/')
 
         # Create the directory if it doesn't exist
-        run('mkdir -p {}{}/'.format(path, folder_name))
+        c.run('mkdir -p {}{}/'.format(path, folder_name))
 
         # Uncompress the archive
-        run('tar -xzf /tmp/{} -C {}{}/'.format(file_name, path, folder_name))
+        c.run('tar -xzf /tmp/{} -C {}{}/'.format(file_name, path, folder_name))
 
         # Remove the archive
-        run('rm /tmp/{}'.format(file_name))
+        c.run('rm /tmp/{}'.format(file_name))
 
         # Move files from web_static to new folder
-        run('mv {0}{1}/web_static/* {0}{1}/'.format(path, folder_name))
+        c.run('mv {0}{1}/web_static/* {0}{1}/'.format(path, folder_name))
 
         # Remove web_static folder
-        run('rm -rf {}{}/web_static'.format(path, folder_name))
+        c.run('rm -rf {}{}/web_static'.format(path, folder_name))
 
         # Remove the old symbolic link
-        run('rm -rf /data/web_static/current')
+        c.run('rm -rf /data/web_static/current')
 
         # Create a new symbolic link
-        run('ln -s {}{}/ /data/web_static/current'.format(path, folder_name))
+        c.run('ln -s {}{}/ /data/web_static/current'.format(path, folder_name))
 
         return True
     except Exception as e:
