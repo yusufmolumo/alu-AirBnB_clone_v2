@@ -1,8 +1,7 @@
 #!/usr/bin/python3
 # script that distributes an archive to web servers
 from fabric.api import env, put, run, sudo
-from os.path import exists, isdir, basename, splitext
-import re
+from os.path import exists, basename, splitext
 
 # Set the username and host for SSH connection to the server
 env.user = 'ubuntu'
@@ -47,14 +46,11 @@ def do_deploy(archive_path):
         run("ln -s {} /data/web_static/current".format(folder))
 
         # Ensure the 'hbnb_static' directory exists and sync with 'current'
-        run("sudo mkdir -p /var/www/html/hbnb_static")
-        run("sudo cp -r /data/web_static/current/* /var/www/html/hbnb_static/")
+        sudo("mkdir -p /var/www/html/hbnb_static")
+        sudo("cp -r /data/web_static/current/* /var/www/html/hbnb_static/")
 
         print("New version deployed!")
         return True
     except Exception as e:
         print(e)
         return False
-
-# Usage:
-# fab -f 2-do_deploy_web_static.py do_deploy:/path/to/file.tgz
