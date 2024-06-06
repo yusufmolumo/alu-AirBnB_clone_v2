@@ -1,60 +1,50 @@
 #!/usr/bin/python3
-# script that distributes an archive to web servers
-from fabric.api import env, put, run, local
-from os.path import exists, isdir
-import os.path
-import re
+"""
+Fabric script based on the file 1-pack_web_static.py that distributes an
+archive to the web servers
+"""
 
-# Set the username and host for SSH connection to the server
-env.user = 'ubuntu'
+from fabric.api import put, run, env
+from os.path import exists
+
+# Define the list of servers
 env.hosts = ['52.207.225.125', '54.160.166.220']
-env.key_filename = '~/.ssh/id_rsa'
 
 def do_deploy(archive_path):
-    """
-    Distributes archive to web servers
-    """
-    # Check if the archive file exists
+    """Distributes an archive to the web servers"""
     if not exists(archive_path):
         return False
+    try:
+        # Extract filename and folder name
+        file_name = archive_path.split("/")[-1]
+        folder_name = file_name.split(".")[0]
+        path = "/data/web_static/releases/"
 
-    # Upload the archive to the /tmp/ directory of the web server
-    put(archive_path, "/tmp/")
-    
-    # Extract filename and folder name
-    filename = re.search(r'[^/]+$', archive_path).group(0)
-    folder_name = os.path.splitext(filename)[0]
-    folder = "/data/web_static/releases/{}".format(folder_name)
-    
-    # Create the folder if it doesn't exist
-    run("mkdir -p {}".format(folder))
-    
-    # Uncompress the archive to the folder
-    run("tar -xzf /tmp/{} -C {}".format(filename, folder))
-    
-    # Remove the archive from the web server
-    run("rm /tmp/{}".format(filename))
-    
-    # Move all files from web_static to the new folder
-    run("mv {}/web_static/* {}".format(folder, folder))
-    
-    # Remove the web_static folder
-    run("rm -rf {}/web_static".format(folder))
-    
-    # Delete the symbolic link
-    run("rm -rf /data/web_static/current")
-    
-    # Create a new symbolic link
-    run("ln -s {} /data/web_static/current".format(folder))
-    
-    # Create 'hbnb_static' directory if it doesn't exist
-    run("sudo mkdir -p /var/www/html/hbnb_static")
-    
-    # Sync 'hbnb_static' with 'current'
-    run("sudo cp -r /data/web_static/current/* /var/www/html/hbnb_static/")
-    
-    print("New version deployed!")
-    return True
+        # Upload the archive to /tmp/
+        put(archive_path, '/tmp/')
 
-# Usage:
-# fab -f 2-do_deploy_web_static.py do_deploy:/path/to/file.tgz
+        # Create the directory if it doesn't exist
+        run('mkdir -p {}{}/'.format(path, folder_name))
+
+        # Uncompress the archive
+        run('tar -xzf /tmp/{} -C {}{}/'.format(file_name, path, folder_name))
+
+        # Remove the archive
+        run('rm /tmp/{}'.format(file_name))
+
+        # Move files from web_static to new folder
+        run('mv {0}{1}/web_static/* {0}{1}/'.format(path, folder_name))
+
+        # Remove web_static folder
+        run('rm -rf {}{}/web_static'.format(path, folder_name))
+
+        # Remove the old symbolic link
+        run('rm -rf /data/web_static/current')
+
+        # Create a new symbolic link
+        run('ln -s {}{}/ /data/web_static/current'.format(path, folder_name))
+
+        return True
+    except Exception as e:
+        print(e)
+        return False
